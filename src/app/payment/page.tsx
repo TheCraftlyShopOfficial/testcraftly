@@ -1,83 +1,92 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import axios from 'axios';
+import { useState } from "react";
+import axios from "axios";
 
-const PaymentPage = () => {
-    const [paymentData, setPaymentData] = useState({
-        merchantId: 'M22VHVREF764V', // Replace with your merchant ID (for testing)
-        transactionId: `TXN${Date.now()}`,
-        merchantUserId: 'user123',
-        amount: 1000,
-        merchantOrderId: `ORD${Date.now()}`,
-        mobileNumber: '9999999999',
-        message: 'Test Payment',
-        email: 'test@example.com',
-        shortName: 'Test User',
-        paymentScope: 'PHONEPE', // Important: Set this value
-        deviceContext: { phonePeVersionCode: 303391 },
-    });
-    const [paymentResponse, setPaymentResponse] = useState(null);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+export default function Home() {
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const handleInputChange = (e) => {
-        setPaymentData({ ...paymentData, [e.target.name]: e.target.value });
+  const handlePayment = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Prepare the data
+    const data = {
+      name: name,
+      amount: amount,
+      mobile,
+      transactionId: "T" + Date.now(),
     };
 
-    const handlePayment = async () => {
-        setLoading(true);
-        setError(null);
-        console.log("Sending payment data:", paymentData); // Log the data being sent
-        try {
-            const response = await axios.post('/api/payment', paymentData);
-            console.log("Payment API Response:", response);
-            setPaymentResponse(response.data);
-            if (response.data.success) {
-                if (response.data.data && response.data.data.instrumentResponse && response.data.data.instrumentResponse.redirectInfo && response.data.data.instrumentResponse.redirectInfo.url){
-                  window.location.href = response.data.data.instrumentResponse.redirectInfo.url
-                }
-                else if (response.data.instrumentResponse && response.data.instrumentResponse.redirectInfo && response.data.instrumentResponse.redirectInfo.url){
-                  window.location.href = response.data.instrumentResponse.redirectInfo.url
-                }
-                else if (response.data.redirectUrl){
-                  window.location.href = response.data.redirectUrl
-                }
-                else{
-                  alert("Payment initiated successfully. Please check your PhonePe app.")
-                }
-            } else {
-                setError(response.data.message || 'Payment failed.');
-            }
-        } catch (err) {
-            setError(err.response?.data?.message || err.message || 'An error occurred.');
-            console.error("Error in payment",err)
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+      // Initiate payment
+      const response = await axios.post("/api/payment", data);
 
-    return (
-        <div>
-            <h1>PhonePe Payment Integration</h1>
-            {error && <div style={{ color: 'red' }}>{error}</div>}
-            {paymentResponse && (
-                <pre>{JSON.stringify(paymentResponse, null, 2)}</pre>
-            )}
-            <label htmlFor="amount">Amount (in Rupees):</label>
+      // Redirect user to PhonePe payment page
+      if (
+        response.data &&
+        response.data.data.instrumentResponse.redirectInfo.url
+      ) {
+        window.location.href =
+          response.data.data.instrumentResponse.redirectInfo.url;
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error initiating payment. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center h-screen bg-gradient-to-r from-indigo-50 to-green-500">
+      <div className="max-w-4xl p-8 bg-white rounded-lg shadow-md">
+        <h2 className="text-2xl font-bold text-center mb-4">
+          PhonePe Payment Gateway
+        </h2>
+        <form onSubmit={handlePayment} className="space-y-4">
+          <div>
+            <label>Name:</label>
             <input
-                type="number"
-                id="amount"
-                name="amount"
-                value={paymentData.amount / 100}
-                onChange={(e) => handleInputChange({ target: { name: 'amount', value: parseInt(e.target.value * 100) } })}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 border rounded"
+              required
             />
-            <br />
-            <button onClick={handlePayment} disabled={loading}>
-                {loading ? 'Processing...' : 'Make Payment'}
-            </button>
-        </div>
-    );
-};
-
-export default PaymentPage;
+          </div>
+          <div>
+            <label>Mobile:</label>
+            <input
+              type="text"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              className="w-full px-4 py-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label>Amount:</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full px-4 py-2 border rounded"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full px-4 py-2 bg-blue-500 text-white rounded"
+          >
+            {loading ? "Processing..." : "Pay Now"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
