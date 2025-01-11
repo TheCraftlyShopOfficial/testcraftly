@@ -2,28 +2,43 @@ import axios from "axios";
 import crypto from "crypto";
 import { NextResponse, NextRequest } from "next/server";
 
+// Define interfaces for data structures
+interface PhonePePayload {
+  merchantId: string;
+  merchantTransactionId: string;
+  name: string;
+  amount: number; // Assuming amount is in paise
+  redirectUrl: string;
+  redirectMode: "POST";
+  callbackUrl: string;
+  mobileNumber: string;
+  paymentInstrument: {
+    type: "PAY_PAGE";
+  };
+}
+
 // Constants (Consider using environment variables)
-const saltKey = process.env.PHONEPE_SALT_KEY;
-const merchantId = process.env.PG_MERCHANT_ID;
+const saltKey: string = process.env.PHONEPE_SALT_KEY || ""; // Enforce string type for env variables
+const merchantId: string = process.env.PG_MERCHANT_ID || "";
 
 export async function POST(req: NextRequest) {
   try {
     // Parse the request data
-    const reqData = await req.json();
+    const reqData: PhonePePayload = await req.json();
 
     // Extract transaction details
-    const merchantTransactionId = reqData.transactionId;
+    const merchantTransactionId = reqData.merchantTransactionId;
 
     // Prepare the payload
-    const data = {
-      merchantId, // Destructuring assignment for clarity
+    const data: PhonePePayload = {
+      merchantId,
       merchantTransactionId,
       name: reqData.name,
       amount: reqData.amount * 100, // Convert to paise
       redirectUrl: `http://localhost:3000/api/status?id=${merchantTransactionId}`,
       redirectMode: "POST",
       callbackUrl: `http://localhost:3000/api/status?id=${merchantTransactionId}`,
-      mobileNumber: reqData.mobile,
+      mobileNumber: reqData.mobileNumber,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
@@ -40,10 +55,10 @@ export async function POST(req: NextRequest) {
     const checksum = `${sha256}###${keyIndex}`;
 
     // Define PhonePe API URL
-    const prodURL = process.env.PAYMENT_URL; // Consistent naming
+    const prodURL: string = process.env.PAYMENT_URL || ""; // Enforce string type
 
     // API call options
-    const options = {
+    const options: Axios.AxiosRequestConfig = {
       method: "POST",
       url: prodURL,
       headers: {
@@ -66,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     // Handle errors more comprehensively
     return NextResponse.json(
-      { error: "Payment initiation failed", details: error.message || "Unknown error" }, // Provide a default error message if needed
+      { error: "Payment initiation failed", details: error.message || "Unknown error" },
       { status: 500 }
     );
   }

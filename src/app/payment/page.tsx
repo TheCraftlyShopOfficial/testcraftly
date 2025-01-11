@@ -5,7 +5,7 @@ import axios from "axios";
 
 export default function Home() {
   const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [mobileNumber, setMobile] = useState("");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +17,7 @@ export default function Home() {
     const data = {
       name: name,
       amount: amount,
-      mobile,
+      mobileNumber,
       transactionId: "T" + Date.now(),
     };
 
@@ -62,7 +62,7 @@ export default function Home() {
             <label>Mobile:</label>
             <input
               type="text"
-              value={mobile}
+              value={mobileNumber}
               onChange={(e) => setMobile(e.target.value)}
               className="w-full px-4 py-2 border rounded"
               required
