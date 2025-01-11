@@ -1,44 +1,28 @@
 import axios from "axios";
 import crypto from "crypto";
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-// Define interfaces for data structures
-interface PhonePePayload {
-  merchantId: string;
-  merchantTransactionId: string;
-  name: string;
-  amount: number; // Assuming amount is in paise
-  redirectUrl: string;
-  redirectMode: "POST";
-  callbackUrl: string;
-  mobileNumber: string;
-  paymentInstrument: {
-    type: "PAY_PAGE";
-  };
-}
-
-// Constants (Consider using environment variables)
-const saltKey: string = process.env.PHONEPE_SALT_KEY || ""; // Enforce string type for env variables
-const merchantId: string = process.env.PG_MERCHANT_ID || "";
+// Constants
+let salt_key = "96434309-7796-489d-8924-ab56988a6076";
+let merchant_id = "PGTESTPAYUAT86";
 
 export async function POST(req: NextRequest) {
   try {
-    // Parse the request data
-    const reqData: PhonePePayload = await req.json();
+    let reqData = await req.json(); // Parse the request data
 
     // Extract transaction details
-    const merchantTransactionId = reqData.merchantTransactionId;
+    let merchantTransactionId = reqData.transactionId;
 
     // Prepare the payload
-    const data: PhonePePayload = {
-      merchantId,
-      merchantTransactionId,
+    const data = {
+      merchantId: merchant_id,
+      merchantTransactionId: merchantTransactionId,
       name: reqData.name,
-      amount: reqData.amount * 100, // Convert to paise
+      amount: reqData.amount * 100, // Convert to paise (smallest currency unit)
       redirectUrl: `http://localhost:3000/api/status?id=${merchantTransactionId}`,
       redirectMode: "POST",
       callbackUrl: `http://localhost:3000/api/status?id=${merchantTransactionId}`,
-      mobileNumber: reqData.mobileNumber,
+      mobileNumber: reqData.mobile,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
@@ -48,40 +32,47 @@ export async function POST(req: NextRequest) {
     const payload = JSON.stringify(data);
     const payloadMain = Buffer.from(payload).toString("base64");
 
-    // Generate checksum
+    // Generate checksum using crypto-js SHA256
     const keyIndex = 1;
-    const string = payloadMain + "/pg/v1/pay" + saltKey;
-    const sha256 = crypto.createHash("sha256").update(string).digest("hex");
+    const string = payloadMain + "/pg/v1/pay" + salt_key;
+    const sha256 = SHA256(string).toString(); // SHA256 from crypto-js
     const checksum = `${sha256}###${keyIndex}`;
 
     // Define PhonePe API URL
-    const prodURL: string = process.env.PAYMENT_URL || ""; // Enforce string type
+    const prod_URL =
+      "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay";
 
     // API call options
-    const options: Axios.AxiosRequestConfig = {
+    const options = {
       method: "POST",
-      url: prodURL,
+      url: prod_URL,
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
       },
       data: {
-        request: payloadMain,
+        request: payloadMain, // Payload sent to PhonePe
       },
     };
 
-    // Make the API call
-    const response = await axios(options);
+    // Make the API call with the expected response type
+    const response = await axios<PaymentResponseData>(options);
 
-    // Return the response from PhonePe
-    return NextResponse.json(response.data);
+    // Handle the response and redirect
+    if (
+      response.data &&
+      response.data.instrumentResponse.redirectInfo.url
+    ) {
+      window.location.href =
+        response.data.instrumentResponse.redirectInfo.url;
+    }
   } catch (error) {
-    console.error("Error during payment initiation:", error);
+    console.error(error);
 
-    // Handle errors more comprehensively
+    // Handle errors
     return NextResponse.json(
-      { error: "Payment initiation failed", details: error.message || "Unknown error" },
+      { error: "Payment initiation failed", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

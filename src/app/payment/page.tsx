@@ -4,12 +4,13 @@ import { useState } from "react";
 import axios from "axios";
 
 export default function Home() {
-  const [name, setName] = useState("");
-  const [mobileNumber, setMobile] = useState("");
-  const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState<string>("");
+  const [mobileNumber, setMobile] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handlePayment = async (e) => {
+  // Define the handlePayment function with the correct event type
+  const handlePayment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
