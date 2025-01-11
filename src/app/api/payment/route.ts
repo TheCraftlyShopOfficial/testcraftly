@@ -3,18 +3,28 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 
 // Constants
-let salt_key = "96434309-7796-489d-8924-ab56988a6076";
-let merchant_id = "PGTESTPAYUAT86";
+const salt_key: string = "96434309-7796-489d-8924-ab56988a6076";
+const merchant_id: string = "PGTESTPAYUAT86";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request): Promise<Response> {
   try {
-    let reqData = await req.json(); // Parse the request data
+    const reqData: { transactionId: string; name: string; amount: number; mobile: string } = await req.json(); // Parse the request data
 
     // Extract transaction details
-    let merchantTransactionId = reqData.transactionId;
+    const merchantTransactionId: string = reqData.transactionId;
 
     // Prepare the payload
-    const data = {
+    const data: {
+      merchantId: string;
+      merchantTransactionId: string;
+      name: string;
+      amount: number;
+      redirectUrl: string;
+      redirectMode: string;
+      callbackUrl: string;
+      mobileNumber: string;
+      paymentInstrument: { type: string };
+    } = {
       merchantId: merchant_id,
       merchantTransactionId: merchantTransactionId,
       name: reqData.name,
@@ -29,21 +39,21 @@ export async function POST(req: NextRequest) {
     };
 
     // Encode payload as Base64
-    const payload = JSON.stringify(data);
-    const payloadMain = Buffer.from(payload).toString("base64");
+    const payload:string = JSON.stringify(data);
+    const payloadMain:string = Buffer.from(payload).toString("base64");
 
-    // Generate checksum using crypto-js SHA256
-    const keyIndex = 1;
-    const string = payloadMain + "/pg/v1/pay" + salt_key;
-    const sha256 = SHA256(string).toString(); // SHA256 from crypto-js
-    const checksum = `${sha256}###${keyIndex}`;
+    // Generate checksum
+    const keyIndex:number = 1;
+    const string:string = payloadMain + "/pg/v1/pay" + salt_key;
+    const sha256:string = crypto.createHash("sha256").update(string).digest("hex");
+    const checksum:string = `${sha256}###${keyIndex}`;
 
     // Define PhonePe API URL
-    const prod_URL =
+    const prod_URL:string =
       "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay";
 
     // API call options
-    const options = {
+    const options:any = {
       method: "POST",
       url: prod_URL,
       headers: {
@@ -52,28 +62,24 @@ export async function POST(req: NextRequest) {
         "X-VERIFY": checksum,
       },
       data: {
-        request: payloadMain, // Payload sent to PhonePe
+        request: payloadMain,
       },
     };
 
-    // Make the API call with the expected response type
-    const response = await axios<PaymentResponseData>(options);
+    // Make the API call
+    const response:any = await axios(options);
 
-    // Handle the response and redirect
-    if (
-      response.data &&
-      response.data.instrumentResponse.redirectInfo.url
-    ) {
-      window.location.href =
-        response.data.instrumentResponse.redirectInfo.url;
-    }
+    // Return the response from PhonePe
+    return NextResponse.json(response.data);
   } catch (error) {
     console.error(error);
 
     // Handle errors
-    return NextResponse.json(
-      { error: "Payment initiation failed", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
+   // Handle errors: Narrow down the type of the `error` object
+   const errorMessage = error instanceof Error ? error.message : "Unknown error";
+   return NextResponse.json(
+     { error: "Payment initiation failed", details: errorMessage },
+     { status: 500 }
+     );
   }
 }
