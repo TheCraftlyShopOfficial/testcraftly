@@ -3,8 +3,8 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 
 // Constants
-let salt_key = "96434309-7796-489d-8924-ab56988a6076";
-let merchant_id = "PGTESTPAYUAT86";
+let salt_key = process.env.PHONEPE_SALT_KEY;
+let merchant_id = process.env.PG_MERCHANT_ID;
 
 export async function POST(req) {
   try {
@@ -39,8 +39,8 @@ export async function POST(req) {
     const checksum = `${sha256}###${keyIndex}`;
 
     // Define PhonePe API URL
-    const prod_URL =
-      "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay";
+    const prod_URL = process.env.PAYMENT_URL;
+      
 
     // API call options
     const options = {
