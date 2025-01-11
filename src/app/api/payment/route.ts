@@ -1,24 +1,25 @@
 import axios from "axios";
 import crypto from "crypto";
-import { NextResponse , NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
-// Constants
-let salt_key = process.env.PHONEPE_SALT_KEY;
-let merchant_id = process.env.PG_MERCHANT_ID;
+// Constants (Consider using environment variables)
+const saltKey = process.env.PHONEPE_SALT_KEY;
+const merchantId = process.env.PG_MERCHANT_ID;
 
 export async function POST(req: NextRequest) {
   try {
-    let reqData = await req.json(); // Parse the request data
+    // Parse the request data
+    const reqData = await req.json();
 
     // Extract transaction details
-    let merchantTransactionId = reqData.transactionId;
+    const merchantTransactionId = reqData.transactionId;
 
     // Prepare the payload
     const data = {
-      merchantId: merchant_id,
-      merchantTransactionId: merchantTransactionId,
+      merchantId, // Destructuring assignment for clarity
+      merchantTransactionId,
       name: reqData.name,
-      amount: reqData.amount * 100, // Convert to paise (smallest currency unit)
+      amount: reqData.amount * 100, // Convert to paise
       redirectUrl: `http://localhost:3000/api/status?id=${merchantTransactionId}`,
       redirectMode: "POST",
       callbackUrl: `http://localhost:3000/api/status?id=${merchantTransactionId}`,
@@ -34,18 +35,17 @@ export async function POST(req: NextRequest) {
 
     // Generate checksum
     const keyIndex = 1;
-    const string = payloadMain + "/pg/v1/pay" + salt_key;
+    const string = payloadMain + "/pg/v1/pay" + saltKey;
     const sha256 = crypto.createHash("sha256").update(string).digest("hex");
     const checksum = `${sha256}###${keyIndex}`;
 
     // Define PhonePe API URL
-    const prod_URL = process.env.PAYMENT_URL;
-      
+    const prodURL = process.env.PAYMENT_URL; // Consistent naming
 
     // API call options
     const options = {
       method: "POST",
-      url: prod_URL,
+      url: prodURL,
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
@@ -62,11 +62,11 @@ export async function POST(req: NextRequest) {
     // Return the response from PhonePe
     return NextResponse.json(response.data);
   } catch (error) {
-    console.error(error);
+    console.error("Error during payment initiation:", error);
 
-    // Handle errors
+    // Handle errors more comprehensively
     return NextResponse.json(
-      { error: "Payment initiation failed", details: error.message },
+      { error: "Payment initiation failed", details: error.message || "Unknown error" }, // Provide a default error message if needed
       { status: 500 }
     );
   }
