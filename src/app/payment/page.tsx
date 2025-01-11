@@ -1,41 +1,62 @@
 "use client";
-
-import { useState } from "react";
+import React, { useState, FormEvent, FC } from "react";
 import axios from "axios";
 
-export default function Home() {
+// Define the expected structure of the response
+interface RedirectInfo {
+  url: string;
+}
+
+interface InstrumentResponse {
+  redirectInfo: RedirectInfo;
+}
+
+interface PaymentResponseData {
+  instrumentResponse: InstrumentResponse;
+}
+
+interface PaymentResponse {
+  success: boolean;
+  data: PaymentResponseData;
+}
+
+const Home: FC = () => {
   const [name, setName] = useState<string>("");
-  const [mobileNumber, setMobile] = useState<string>("");
+  const [mobile, setMobile] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Define the handlePayment function with the correct event type
-  const handlePayment = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handlePayment = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setLoading(true);
 
     // Prepare the data
     const data = {
-      name: name,
-      amount: amount,
-      mobileNumber,
+      name,
+      amount,
+      mobile,
       transactionId: "T" + Date.now(),
     };
 
     try {
-      // Initiate payment
-      const response = await axios.post("/api/payment", data);
+      // Initiate payment and type the Axios response
+      const response = await axios.post<PaymentResponse>(
+        "/api/payment",
+        data
+      );
 
-      // Redirect user to PhonePe payment page
+      // Access response data safely
       if (
-        response.data &&
+        response.data.success &&
         response.data.data.instrumentResponse.redirectInfo.url
       ) {
         window.location.href =
           response.data.data.instrumentResponse.redirectInfo.url;
+      } else {
+        alert("Payment initiation failed: No redirect URL found.");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Payment Error:", err);
       alert("Error initiating payment. Please try again.");
     } finally {
       setLoading(false);
@@ -63,7 +84,7 @@ export default function Home() {
             <label>Mobile:</label>
             <input
               type="text"
-              value={mobileNumber}
+              value={mobile}
               onChange={(e) => setMobile(e.target.value)}
               className="w-full px-4 py-2 border rounded"
               required
@@ -90,4 +111,6 @@ export default function Home() {
       </div>
     </div>
   );
-}
+};
+
+export default Home;
