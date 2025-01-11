@@ -1,12 +1,12 @@
 import axios from "axios";
 import crypto from "crypto";
-import { NextResponse } from "next/server";
+import { NextResponse , NextRequest } from "next/server";
 
 // Constants
 let salt_key = process.env.PHONEPE_SALT_KEY;
 let merchant_id = process.env.PG_MERCHANT_ID;
 
-export async function POST(req) {
+export async function POST(req: NextRequest) {
   try {
     let reqData = await req.json(); // Parse the request data
 
